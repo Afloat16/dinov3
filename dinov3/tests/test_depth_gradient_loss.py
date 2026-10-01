@@ -30,7 +30,7 @@ class MaskedGradientLossTests(unittest.TestCase):
     def test_sparse_mask_can_disappear_at_coarser_scales(self):
         for cls in (GradientLoss, GradientLogLoss):
             with self.subTest(cls=cls):
-                pred = torch.arange(1., 50.).reshape(1, 7, 7).requires_grad_()
+                pred = torch.arange(1.0, 50.0).reshape(1, 7, 7).requires_grad_()
                 mask = torch.zeros_like(pred, dtype=torch.bool)
                 mask[:, 1, 1] = mask[:, 1, 3] = True
                 target = torch.ones_like(pred)
@@ -50,8 +50,8 @@ class MaskedGradientLossTests(unittest.TestCase):
                 mask = torch.ones_like(pred, dtype=torch.bool)
                 mask[:, 2, 2] = mask[:, 4, 4] = False
                 pred[:, 2, 2], target[:, 2, 2] = float("nan"), float("nan")
-                pred[:, 4, 4], target[:, 4, 4] = -5., -2.
-                pred[:, 1, 1] = 2.
+                pred[:, 4, 4], target[:, 4, 4] = -5.0, -2.0
+                pred[:, 1, 1] = 2.0
                 pred.requires_grad_()
                 value = cls()(pred, target, mask)
                 expected = valid_edge_oracle(pred, target, mask, cls is GradientLogLoss)
@@ -65,8 +65,8 @@ class MaskedGradientLossTests(unittest.TestCase):
             with self.subTest(cls=cls):
                 pred = torch.full((1, 5, 5), float("nan"), requires_grad=True)
                 mask = torch.zeros_like(pred, dtype=torch.bool)
-                value = cls()(pred, torch.full_like(pred, -1.), mask)
-                self.assertEqual(value.item(), 0.)
+                value = cls()(pred, torch.full_like(pred, -1.0), mask)
+                self.assertEqual(value.item(), 0.0)
                 value.backward()
                 torch.testing.assert_close(pred.grad, torch.zeros_like(pred))
 
@@ -77,7 +77,9 @@ class MaskedGradientLossTests(unittest.TestCase):
         mask = torch.ones_like(pred, dtype=torch.bool)
         for cls in (GradientLoss, GradientLogLoss):
             with self.subTest(cls=cls):
-                torch.testing.assert_close(cls()(pred, target), valid_edge_oracle(pred, target, mask, cls is GradientLogLoss))
+                torch.testing.assert_close(
+                    cls()(pred, target), valid_edge_oracle(pred, target, mask, cls is GradientLogLoss)
+                )
 
 
 if __name__ == "__main__":
