@@ -1,0 +1,61 @@
+name: Geometry contribution style
+on:
+  push:
+    branches: [validation/oct2-geometry-style]
+permissions:
+  contents: read
+jobs:
+  style:
+    name: ${{ matrix.id }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: dinov3-koleo-self-exclusion
+            ref: ba7ec421a0890e2092bb4977a7b66a2e7b1882f7
+            source: dinov3/loss/koleo_loss.py
+            test: dinov3/tests/test_koleo_self_exclusion.py
+            base: 6876159a11b4df116f30f667f8c9888617df0751
+          - id: dinov3-silog-stability
+            ref: 9017ba24d7475d5091f21131afeaff019de4a9b4
+            source: dinov3/eval/depth/metrics.py
+            test: dinov3/tests/test_depth_silog_stability.py
+            base: 6876159a11b4df116f30f667f8c9888617df0751
+          - id: dinov3-scheduler-total-iters
+            ref: 7072882639b14f8d1828e9143990d719eca908d3
+            source: dinov3/eval/depth/schedulers.py
+            test: dinov3/tests/test_depth_scheduler_total_iters.py
+            base: 6876159a11b4df116f30f667f8c9888617df0751
+          - id: dinov3-multistep-group-phase
+            ref: 7565e6e758f87a9f27b70fc982093e26802ab018
+            source: dinov3/eval/depth/schedulers.py
+            test: dinov3/tests/test_depth_multistep_groups.py
+            base: 6876159a11b4df116f30f667f8c9888617df0751
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: audit
+      - uses: actions/checkout@v4
+        with:
+          repository: Afloat16/dinov3
+          ref: ${{ matrix.ref }}
+          fetch-depth: 0
+          path: candidate
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install ruff==0.12.8
+      - name: Check exact project style and format
+        working-directory: candidate
+        env:
+          STYLE_SOURCE: ${{ matrix.source }}
+          STYLE_TEST: ${{ matrix.test }}
+          STYLE_BASE: ${{ matrix.base }}
+        run: python ../audit/validation/oct2_geometry_style.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: geometry-style-${{ matrix.id }}
+          path: candidate/style-result.json
+          if-no-files-found: error
