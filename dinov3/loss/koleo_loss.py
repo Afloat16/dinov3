@@ -5,8 +5,8 @@
 
 import torch
 import torch.distributed as torch_dist
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 
 import dinov3.distributed as dist
 
@@ -26,7 +26,9 @@ class KoLeoLoss(nn.Module):
         # parwise dot products (= inverse distance)
         dots = torch.mm(x, x.t())
         n = x.shape[0]
-        dots.view(-1)[:: (n + 1)].fill_(-1)  # Trick to fill diagonal with -1
+        if n < 2:
+            raise ValueError("KoLeo loss requires at least one other sample as a neighbor.")
+        dots.view(-1)[:: (n + 1)].fill_(-torch.inf)
         _, indices = torch.max(dots, dim=1)  # max inner prod -> min distance
         return indices
 
@@ -60,7 +62,9 @@ class KoLeoLossDistributed(nn.Module):
         # parwise dot products (= inverse distance)
         dots = torch.mm(x, all_x.t())  # local_B x global_B
         local_B, global_B = dots.shape
-        dots.view(-1)[rank * local_B :: (global_B + 1)].fill_(-1)  # Trick to fill diagonal with -1
+        if not 1 <= self.topk < global_B:
+            raise ValueError("KoLeo topk must be positive and smaller than the neighbor set size.")
+        dots.view(-1)[rank * local_B :: (global_B + 1)].fill_(-torch.inf)
         _, indices = torch.topk(dots, dim=1, k=self.topk)  # max inner prod -> min distance
         return indices
 
